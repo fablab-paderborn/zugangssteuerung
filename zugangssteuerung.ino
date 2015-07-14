@@ -34,8 +34,11 @@
 MFRC522 mfrc522(SELECT_READER_PIN, RST_PIN); // Create MFRC522 instance
 
 File logFile;
+#define doLog(x) Serial.print(x); logFile.print(x);
+#define doLog2(x,y) Serial.print((x),(y)); logFile.print((x),(y));
 
 bool inUse;
+unsigned long switchedOnAt;
 
 #define MAX_ALLOWED_CARDS 32
 #define EXPECT_UID_LENGTH 7
@@ -133,6 +136,10 @@ void setup() {
   }
 */
 
+  logFile = SD.open("log.txt", FILE_WRITE);
+  doLog("reboot\n");
+  logFile.close();
+
   inUse = false;
   pinMode(USE_PIN, OUTPUT);
   digitalWrite(USE_PIN, LOW);
@@ -141,19 +148,20 @@ void setup() {
   digitalWrite(BUTTON_PIN, HIGH);
 }
 
-#define doLog(x) Serial.print(x); logFile.print(x);
-#define doLog2(x,y) Serial.print((x),(y)); logFile.print((x),(y));
-
 void loop() {
+  unsigned long t = millis();
   if (inUse) {
     if (digitalRead(BUTTON_PIN) == LOW) {
       logFile = SD.open("log.txt", FILE_WRITE);
 
-      doLog(millis());
-      doLog(" -> off\n");
+      doLog(t);
+      doLog(" -> off, delta t = ");
+      doLog(t - switchedOnAt);
+      doLog("ms\n");
 
       inUse = false;
       digitalWrite(USE_PIN, LOW);
+      logFile.close();
     }
   } else {
     // Look for new cards
@@ -174,6 +182,9 @@ void loop() {
 
     MFRC522::Uid &uid = mfrc522.uid;
 
+    doLog(t);
+    doLog(" --");
+
     for (byte i = 0; i < uid.size; i++) {
       if (uid.uidByte[i] < 0x10) {
         doLog(" 0");
@@ -182,8 +193,6 @@ void loop() {
       }
       doLog2(uid.uidByte[i], HEX);
     }
-    doLog(" -- ");
-    doLog(millis());
 
     bool accept = false;
     if (uid.size == EXPECT_UID_LENGTH) {
@@ -197,6 +206,7 @@ void loop() {
 
         inUse = true;
         digitalWrite(USE_PIN, HIGH);
+        switchedOnAt = t;
       } else {
         doLog(" -- unknown card\n");
       }

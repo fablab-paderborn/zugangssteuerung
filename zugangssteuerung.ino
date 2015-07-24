@@ -26,10 +26,19 @@
 
 #define RST_PIN 9
 #define SELECT_READER_PIN 10
-#define SELECT_SD_PIN 4
+#define SELECT_SD_PIN 5
 
-#define USE_PIN 3
+#define USE_PIN 4
 #define BUTTON_PIN 2
+// let the cooling system run for 10 more minutes after the device was switched off
+#define COOLING_PIN 3
+// #define COOLING_EXTRA_TIME 5*1000
+#define COOLING_EXTRA_TIME 10*60*1000
+
+unsigned long runCoolingUntil = 0;
+
+#define LOG_EVERY 5*60*1000
+unsigned long lastLogEntry = 0;
 
 MFRC522 mfrc522(SELECT_READER_PIN, RST_PIN); // Create MFRC522 instance
 
@@ -143,6 +152,8 @@ void setup() {
   inUse = false;
   pinMode(USE_PIN, OUTPUT);
   digitalWrite(USE_PIN, LOW);
+  pinMode(COOLING_PIN, OUTPUT);
+  digitalWrite(COOLING_PIN, LOW);
 
   pinMode(BUTTON_PIN, INPUT);
   digitalWrite(BUTTON_PIN, HIGH);
@@ -162,8 +173,25 @@ void loop() {
       inUse = false;
       digitalWrite(USE_PIN, LOW);
       logFile.close();
+
+      runCoolingUntil = t + COOLING_EXTRA_TIME;
+    } else {
+      if (t >= lastLogEntry + LOG_EVERY) {
+        logFile = SD.open("log.txt", FILE_WRITE);
+
+        doLog(t);
+        doLog(" - still running, delta t = ");
+        doLog(t - switchedOnAt);
+        doLog("ms\n");
+
+        logFile.close();
+
+        lastLogEntry = t;
+      }
     }
   } else {
+    digitalWrite(COOLING_PIN, t > runCoolingUntil ? LOW : HIGH);
+
     // Look for new cards
     if (!mfrc522.PICC_IsNewCardPresent()) {
       return;
@@ -206,7 +234,9 @@ void loop() {
 
         inUse = true;
         digitalWrite(USE_PIN, HIGH);
+        digitalWrite(COOLING_PIN, HIGH);
         switchedOnAt = t;
+        lastLogEntry = t;
       } else {
         doLog(" -- unknown card\n");
       }

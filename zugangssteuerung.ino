@@ -1,10 +1,9 @@
 /*
- * If your reader supports it, this sketch/program will read all the PICCs
- * presented (that is: multiple tag reading). So if you stack two or more
- * PICCs on top of each other and present them to the reader, it will first
- * output all details of the first and then the next PICC. Note that this
- * may take some time as all data blocks are dumped, so keep the PICCs at
- * reading distance until complete.
+ * Access control (and logging) for the machines in FabLab Paderborn
+ * which need some training.
+ *
+ * This code is Copyright 2015 by Christopher Creutzig and may be used
+ * under the terms of the MIT license.
  *
  * Typical pin layout used:
  * -----------------------------------------------------------------------------------------
@@ -24,14 +23,15 @@
 #include <MFRC522.h>
 #include <SD.h>
 
-#define RST_PIN 9
+#define RST_PIN A4 // unused anyway, lack of 5V/3V3 converters
 #define SELECT_READER_PIN 10
-#define SELECT_SD_PIN 5
+#define SELECT_SD_PIN A3
 
-#define USE_PIN 4
-#define BUTTON_PIN 2
-// let the cooling system run for 10 more minutes after the device was switched off
-#define COOLING_PIN 3
+#define BUTTON_PIN 1
+#define LED_PIN 0
+// let the cooling system run for 10 more minutes after the laser cutter was switched off
+#define COOLING_PIN 8
+#define USE_PIN 9
 // #define COOLING_EXTRA_TIME 5*1000
 #define COOLING_EXTRA_TIME 10*60*1000
 
